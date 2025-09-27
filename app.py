@@ -1,30 +1,37 @@
 import streamlit as st
 import numpy as np
-from scipy.stats import norm
+import math
 import plotly.express as px
 import plotly.graph_objects as go
 
+# -----------------------
+# Normal CDF approximation (replaces scipy.stats.norm.cdf)
+# -----------------------
+def norm_cdf(x):
+    """Cumulative distribution function for the standard normal distribution"""
+    return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 
-# black-scholes formulas
-
+# -----------------------
+# Black-Scholes formulas
+# -----------------------
 def black_scholes_call(S, K, T, r, sigma):
-    d1 = (np.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*np.sqrt(T))
-    d2 = d1 - sigma*np.sqrt(T)
-    return S*norm.cdf(d1) - K*np.exp(-r*T)*norm.cdf(d2)
+    d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+    d2 = d1 - sigma*math.sqrt(T)
+    return S*norm_cdf(d1) - K*math.exp(-r*T)*norm_cdf(d2)
 
 def black_scholes_put(S, K, T, r, sigma):
-    d1 = (np.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*np.sqrt(T))
-    d2 = d1 - sigma*np.sqrt(T)
-    return K*np.exp(-r*T)*norm.cdf(-d2) - S*norm.cdf(-d1)
+    d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+    d2 = d1 - sigma*math.sqrt(T)
+    return K*math.exp(-r*T)*norm_cdf(-d2) - S*norm_cdf(-d1)
 
 
-# UI
+# Streamlit UI
 
 st.title("Black-Scholes Options Price Heatmap")
 
-# fixed parameters
+# financial factor sliders
 K = st.slider("Strike Price", 50, 200, 100)
-T = st.slider("Time to Maturity (years)", 0.08, 5.0, 1.0, step = (1/12))
+T = st.slider("Time to Maturity (years)", 0.08, 5.0, 1.0, step=(1/12))
 r = st.slider("Risk-free Interest Rate", 0.0, 0.1, 0.05)
 
 # ranges for heatmap
@@ -37,7 +44,7 @@ min_vol = st.number_input("Min Volatility", 0.01, 1.0, 0.1)
 max_vol = st.number_input("Max Volatility", 0.01, 1.0, 0.5)
 
 if min_spot >= max_spot:
-    st.error("Min Spot Price mus be less than Max Spot Price")
+    st.error("Min Spot Price must be less than Max Spot Price")
     st.stop()
 
 if min_vol >= max_vol:
@@ -49,9 +56,9 @@ spot_range = np.linspace(min_spot, max_spot, 12)
 vol_range = np.linspace(min_vol, max_vol, 12)
 
 # compute heatmaps
-call_data = []   
+call_data = []
 put_data = []
-for v in vol_range: 
+for v in vol_range:
     call_row = [black_scholes_call(s, K, T, r, v) for s in spot_range]
     put_row = [black_scholes_put(s, K, T, r, v) for s in spot_range]
     call_data.append(call_row)
